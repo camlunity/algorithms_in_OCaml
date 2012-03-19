@@ -33,3 +33,42 @@ let eratosthenes_better n = (* more fast *)
     else make_ans (i - 1) (let j = Array1.get nums i in if j = 0 then accum else j :: accum)
   in
   make_ans n [] |> List.filter ((<>) 0) |> List.tl
+
+
+(* Well, this is ugly, but we're guaranteed to have linear time. *)
+exception Break
+
+let eratosthenes_linear n =
+  (* For each number from the interval (1; n] we assign a minimal prime
+     divisor and put it in 'table'. *)
+  let table = Array.(make (n + 1) 0 |> mapi (fun i _ -> i)) in
+  let q     = Queue.create () in
+  let rec aux = function
+    | current when current >= n -> ()
+    | current ->
+        let d = table.(current) in
+
+        (* If the MPD we have in the table is the same is the number
+           itself -- it should be prime. *)
+        if d = current then
+          Queue.push current q;
+
+        (* Note: what we really need here is a dllist, but unfortunately
+           it's not available in stdlib. *)
+        begin
+          try
+            Queue.iter (fun p ->
+              if p <= d && p * current <= n then
+                table.(p * current) <- p
+              else
+                raise Break
+            ) q;
+          with Break -> ()
+        end;
+
+        aux (current + 2)
+  in begin
+    Queue.push 2 q;  (* '2' is allways prime. *)
+    aux 3;
+    List.rev (Queue.fold (fun acc p -> p :: acc) [] q)
+  end
